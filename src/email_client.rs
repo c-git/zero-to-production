@@ -9,6 +9,7 @@ use secrecy::{ExposeSecret, Secret};
 
 pub struct EmailClient {
     sender: SubscriberEmail,
+    timeout: std::time::Duration,
     kind_email_provider: KindEmailProvider,
 }
 
@@ -34,9 +35,14 @@ pub struct EmailProviderSMTP {
 }
 
 impl EmailClient {
-    pub fn new(sender: SubscriberEmail, kind_email_provider: KindEmailProvider) -> Self {
+    pub fn new(
+        sender: SubscriberEmail,
+        timeout: std::time::Duration,
+        kind_email_provider: KindEmailProvider,
+    ) -> Self {
         Self {
             sender,
+            timeout,
             kind_email_provider,
         }
     }
@@ -55,12 +61,14 @@ impl EmailClient {
         };
         Self {
             sender,
+            timeout,
             kind_email_provider: KindEmailProvider::URL(kind_email_provider),
         }
     }
 
     pub fn new_smtp(
         sender: SubscriberEmail,
+        timeout: std::time::Duration,
         name: Option<String>,
         username: Option<String>,
         password: Secret<String>,
@@ -74,6 +82,7 @@ impl EmailClient {
         };
         Self {
             sender,
+            timeout,
             kind_email_provider: KindEmailProvider::SMTP(kind_email_provider),
         }
     }
@@ -134,7 +143,7 @@ impl EmailClient {
                         username,
                         kind_smtp.password.expose_secret().to_owned(),
                     ))
-                    //.timeout() // TODO: Add support for setting timeout
+                    .timeout(Some(self.timeout))
                     .build();
 
                 // Sends the email
