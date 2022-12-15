@@ -1,4 +1,9 @@
 use crate::domain::SubscriberEmail;
+use anyhow::Context;
+use lettre::{
+    message::Mailbox, transport::smtp::authentication::Credentials, Message, SmtpTransport,
+    Transport,
+};
 use reqwest::Client;
 use secrecy::{ExposeSecret, Secret};
 
@@ -7,39 +12,69 @@ pub struct EmailClient {
     kind_email_provider: KindEmailProvider,
 }
 
-enum KindEmailProvider {
+pub enum KindEmailProvider {
     URL(EmailProviderURL),
     SMTP(EmailProviderSMTP),
 }
 
-struct EmailProviderURL {
+pub struct EmailProviderURL {
     http_client: Client,
     base_url: String,
     authorization_token: Secret<String>,
 }
 
-struct EmailProviderSMTP {
-    /// The name to provide to put on outgoing emails
-    name: String,
+pub struct EmailProviderSMTP {
+    /// The name to put on outgoing emails
+    name: Option<String>,
     /// The username to use to log into the SMTP server, if not provided [`EmailClient::sender`] is
     /// used (eg. For Gmail they are the same and this can be None)
     username: Option<String>,
     password: Secret<String>,
+    smtp_server: String,
 }
 
 impl EmailClient {
-    pub fn new(
+    pub fn new(sender: SubscriberEmail, kind_email_provider: KindEmailProvider) -> Self {
+        Self {
+            sender,
+            kind_email_provider,
+        }
+    }
+
+    pub fn new_url(
         base_url: String,
         sender: SubscriberEmail,
         authorization_token: Secret<String>,
         timeout: std::time::Duration,
     ) -> Self {
         let http_client = Client::builder().timeout(timeout).build().unwrap();
-        Self {
+        let kind_email_provider = EmailProviderURL {
             http_client,
             base_url,
-            sender,
             authorization_token,
+        };
+        Self {
+            sender,
+            kind_email_provider: KindEmailProvider::URL(kind_email_provider),
+        }
+    }
+
+    pub fn new_smtp(
+        sender: SubscriberEmail,
+        name: Option<String>,
+        username: Option<String>,
+        password: Secret<String>,
+        smtp_server: String,
+    ) -> Self {
+        let kind_email_provider = EmailProviderSMTP {
+            name,
+            username,
+            password,
+            smtp_server,
+        };
+        Self {
+            sender,
+            kind_email_provider: KindEmailProvider::SMTP(kind_email_provider),
         }
     }
 
@@ -49,25 +84,64 @@ impl EmailClient {
         subject: &str,
         html_content: &str,
         text_content: &str,
-    ) -> Result<(), reqwest::Error> {
-        let url = format!("{}/email", self.base_url);
-        let request_body = SendEmailRequest {
-            from: self.sender.as_ref(),
-            to: recipient.as_ref(),
-            subject,
-            html_body: html_content,
-            text_body: text_content,
-        };
-        self.http_client
-            .post(&url)
-            .header(
-                "X-Postmark-Server-Token",
-                self.authorization_token.expose_secret(),
-            )
-            .json(&request_body)
-            .send()
-            .await?
-            .error_for_status()?;
+    ) -> Result<(), anyhow::Error> {
+        match &self.kind_email_provider {
+            KindEmailProvider::URL(kind_url) => {
+                let url = format!("{}/email", kind_url.base_url);
+                let request_body = SendEmailRequest {
+                    from: self.sender.as_ref(),
+                    to: recipient.as_ref(),
+                    subject,
+                    html_body: html_content,
+                    text_body: text_content,
+                };
+                kind_url
+                    .http_client
+                    .post(&url)
+                    .header(
+                        "X-Postmark-Server-Token",
+                        kind_url.authorization_token.expose_secret(),
+                    )
+                    .json(&request_body)
+                    .send()
+                    .await?
+                    .error_for_status()?;
+            }
+            KindEmailProvider::SMTP(kind_smtp) => {
+                let from = Mailbox {
+                    name: kind_smtp.name.to_owned(),
+                    email: self
+                        .sender
+                        .as_ref()
+                        .parse()
+                        .context("Failed to parse email address")?,
+                };
+
+                // TODO: Implement use of html_body
+                let email = Message::builder()
+                    .from(from)
+                    .to(recipient.as_ref().parse()?)
+                    .subject(subject)
+                    .body(text_content.to_owned())?;
+
+                let username = match &kind_smtp.username {
+                    None => self.sender.to_string(),
+                    Some(username) => username.clone(),
+                };
+
+                let mailer = SmtpTransport::relay(&kind_smtp.smtp_server)?
+                    .credentials(Credentials::new(
+                        username,
+                        kind_smtp.password.expose_secret().to_owned(),
+                    ))
+                    //.timeout() // TODO: Add support for setting timeout
+                    .build();
+
+                // Sends the email
+                mailer.send(&email)?;
+            }
+        }
+
         Ok(())
     }
 }
@@ -84,6 +158,7 @@ struct SendEmailRequest<'a> {
 
 #[cfg(test)]
 mod tests {
+    // TODO: Add tests for Gmail (not quite sure how that would work yet)
     use crate::domain::SubscriberEmail;
     use crate::email_client::EmailClient;
     use claim::{assert_err, assert_ok};
@@ -128,7 +203,7 @@ mod tests {
 
     /// Get a test instance of `EmailClient`.
     fn email_client(base_url: String) -> EmailClient {
-        EmailClient::new(
+        EmailClient::new_url(
             base_url,
             email(),
             Secret::new(Faker.fake()),
