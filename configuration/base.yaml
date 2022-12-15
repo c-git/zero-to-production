@@ -10,14 +10,13 @@ database:
   database_name: "newsletter"
   require_ssl: false
 email_client:
-  sender_email: "test@gmail.com"
+  sender_email: "test@gmail.com" # If using SMTP ensure this is set to the Gmail address that matches the password in kind.smtp.password
   timeout_milliseconds: 10000
   kind:
-    url:
-      base_url: "localhost"
-      authorization_token: "my-secret-token"
-# To use SMTP remove this line (or leave it commented out), comment out the 3 lines above for URL, uncomment the 3 below for SMTP and ensure you set the correct email address in sender_email
-#    smtp:
-#      password: "use an app password here https://support.google.com/mail/answer/185833" # Note Google doesn't really like these, but it's great for testing
-#      smtp_server: "smtp.gmail.com"
+#    url:
+#      base_url: "localhost"
+#      authorization_token: "my-secret-token"
+    smtp:
+      password: "use an app password here https://support.google.com/mail/answer/185833" # Note Google doesn't really like these, but it  works for testing
+      smtp_server: "smtp.gmail.com"
 redis_uri: "redis://127.0.0.1:6379"
