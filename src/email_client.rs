@@ -3,10 +3,28 @@ use reqwest::Client;
 use secrecy::{ExposeSecret, Secret};
 
 pub struct EmailClient {
+    sender: SubscriberEmail,
+    kind_email_provider: KindEmailProvider,
+}
+
+enum KindEmailProvider {
+    URL(EmailProviderURL),
+    SMTP(EmailProviderSMTP),
+}
+
+struct EmailProviderURL {
     http_client: Client,
     base_url: String,
-    sender: SubscriberEmail,
     authorization_token: Secret<String>,
+}
+
+struct EmailProviderSMTP {
+    /// The name to provide to put on outgoing emails
+    name: String,
+    /// The username to use to log into the SMTP server, if not provided [`EmailClient::sender`] is
+    /// used (eg. For Gmail they are the same and this can be None)
+    username: Option<String>,
+    password: Secret<String>,
 }
 
 impl EmailClient {
