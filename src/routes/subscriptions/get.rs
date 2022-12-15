@@ -40,7 +40,7 @@ pub async fn subscribe_form(
         <br>
         <button type="submit">Subscribe to Newsletter</button>
     </form>
-    <p><a href="/">&lt;- Back</a></p>
+    <p><a href="/">&lt;- Home</a></p>
 </body>
 </html>"#,
         )))

@@ -35,6 +35,7 @@ pub async fn login_form(flash_messages: IncomingFlashMessages) -> HttpResponse {
         </label>
         <button type="submit">Login</button>
     </form>
+    <p><a href="/">&lt;- Home</a></p>
 </body>
 </html>"#,
         ))
