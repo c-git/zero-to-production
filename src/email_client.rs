@@ -1,5 +1,6 @@
 use crate::domain::SubscriberEmail;
 use anyhow::Context;
+use lettre::message::MultiPart;
 use lettre::{
     message::Mailbox, transport::smtp::authentication::Credentials, Message, SmtpTransport,
     Transport,
@@ -126,12 +127,14 @@ impl EmailClient {
                         .context("Failed to parse email address")?,
                 };
 
-                // TODO: Implement use of html_body
                 let email = Message::builder()
                     .from(from)
                     .to(recipient.as_ref().parse()?)
                     .subject(subject)
-                    .body(text_content.to_owned())?;
+                    .multipart(MultiPart::alternative_plain_html(
+                        String::from(text_content),
+                        String::from(html_content),
+                    ))?;
 
                 let username = match &kind_smtp.username {
                     None => self.sender.to_string(),
