@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 use wiremock::MockServer;
-use zero2prod::configuration::{get_configuration, DatabaseSettings};
+use zero2prod::configuration::{get_configuration, DatabaseSettings, KindEmailProviderSettings};
 use zero2prod::email_client::EmailClient;
 use zero2prod::issue_delivery_worker::{try_execute_task, ExecutionOutcome};
 use zero2prod::startup::{get_connection_pool, Application};
@@ -192,7 +192,16 @@ pub async fn spawn_app() -> TestApp {
         // Use a random OS port
         c.application.port = 0;
         // Use the mock server as email API
-        c.email_client.base_url = email_server.uri();
+        match &mut c.email_client.kind {
+            KindEmailProviderSettings::URL(kind) => {
+                kind.base_url = email_server.uri();
+            }
+            KindEmailProviderSettings::SMTP(_kind) => {
+                // TODO: Add tests for Gmail (not quite sure how that would work yet)
+                unimplemented!("smtp not supported in testing yet")
+            }
+        }
+
         c
     };
 

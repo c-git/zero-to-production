@@ -10,8 +10,14 @@ database:
   database_name: "newsletter"
   require_ssl: false
 email_client:
-  base_url: "localhost"
   sender_email: "test@gmail.com"
-  authorization_token: "my-secret-token"
   timeout_milliseconds: 10000
+  kind:
+    url:
+      base_url: "localhost"
+      authorization_token: "my-secret-token"
+# To use SMTP remove this line (or leave it commented out), comment out the 3 lines above for URL and uncomment the 3 below for SMTP.
+#    smtp:
+#      password: "use a app password here https://support.google.com/mail/answer/185833" # Note Google doesn't really like these, but it's great for testing
+#      smtp_server: "smtp.gmail.com"
 redis_uri: "redis://127.0.0.1:6379"

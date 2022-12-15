@@ -58,24 +58,54 @@ impl DatabaseSettings {
 
 #[derive(serde::Deserialize, Clone)]
 pub struct EmailClientSettings {
-    pub base_url: String,
     pub sender_email: String,
-    pub authorization_token: Secret<String>,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub timeout_milliseconds: u64,
+    pub kind: KindEmailProviderSettings,
+}
+
+#[derive(serde::Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum KindEmailProviderSettings {
+    URL(EmailProviderURLSettings),
+    SMTP(EmailProviderSMTPSettings),
+}
+
+#[derive(serde::Deserialize, Clone)]
+pub struct EmailProviderURLSettings {
+    pub base_url: String,
+    pub authorization_token: Secret<String>,
+}
+
+#[derive(serde::Deserialize, Clone)]
+pub struct EmailProviderSMTPSettings {
+    name: Option<String>,
+    username: Option<String>,
+    password: Secret<String>,
+    smtp_server: String,
 }
 
 impl EmailClientSettings {
     pub fn client(self) -> EmailClient {
         let sender_email = self.sender().expect("Invalid sender email address.");
         let timeout = self.timeout();
-        // TODO: Change to use either email kind
-        EmailClient::new_url(
-            self.base_url,
-            sender_email,
-            self.authorization_token,
-            timeout,
-        )
+
+        match self.kind {
+            KindEmailProviderSettings::URL(kind) => EmailClient::new_url(
+                kind.base_url,
+                sender_email,
+                kind.authorization_token,
+                timeout,
+            ),
+            KindEmailProviderSettings::SMTP(kind) => EmailClient::new_smtp(
+                sender_email,
+                timeout,
+                kind.name,
+                kind.username,
+                kind.password,
+                kind.smtp_server,
+            ),
+        }
     }
 
     pub fn sender(&self) -> Result<SubscriberEmail, String> {
