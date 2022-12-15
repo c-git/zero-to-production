@@ -1,10 +1,13 @@
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
 use once_cell::sync::Lazy;
+use secrecy::Secret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 use wiremock::MockServer;
-use zero2prod::configuration::{get_configuration, DatabaseSettings, KindEmailProviderSettings};
+use zero2prod::configuration::{
+    get_configuration, DatabaseSettings, EmailProviderURLSettings, KindEmailProviderSettings,
+};
 use zero2prod::email_client::EmailClient;
 use zero2prod::issue_delivery_worker::{try_execute_task, ExecutionOutcome};
 use zero2prod::startup::{get_connection_pool, Application};
@@ -192,14 +195,14 @@ pub async fn spawn_app() -> TestApp {
         // Use a random OS port
         c.application.port = 0;
         // Use the mock server as email API
-        match &mut c.email_client.kind {
-            KindEmailProviderSettings::URL(kind) => {
-                kind.base_url = email_server.uri();
-            }
-            KindEmailProviderSettings::SMTP(_kind) => {
-                // TODO: Add tests for Gmail (not quite sure how that would work yet)
-                unimplemented!("smtp not supported in testing yet")
-            }
+        if let KindEmailProviderSettings::URL(kind) = &mut c.email_client.kind {
+            kind.base_url = email_server.uri();
+        } else {
+            // TODO: Add tests for SMTP. Haven't figured out a good way yet so just always testing with URL for now
+            c.email_client.kind = KindEmailProviderSettings::URL(EmailProviderURLSettings {
+                base_url: email_server.uri(),
+                authorization_token: Secret::new(Default::default()),
+            });
         }
 
         c

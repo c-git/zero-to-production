@@ -167,7 +167,6 @@ struct SendEmailRequest<'a> {
 
 #[cfg(test)]
 mod tests {
-    // TODO: Add tests for Gmail (not quite sure how that would work yet)
     use crate::domain::SubscriberEmail;
     use crate::email_client::EmailClient;
     use claim::{assert_err, assert_ok};
