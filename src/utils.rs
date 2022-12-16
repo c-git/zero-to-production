@@ -23,3 +23,7 @@ pub fn see_other(location: &str) -> HttpResponse {
         .insert_header((LOCATION, location))
         .finish()
 }
+
+pub fn wrap_in_quotes(s: &str) -> String {
+    format!("\"{s}\"")
+}
