@@ -65,7 +65,7 @@ pub struct EmailClientSettings {
 }
 
 #[derive(serde::Deserialize, Clone)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "lowercase", tag = "type")]
 pub enum KindEmailProviderSettings {
     URL(EmailProviderURLSettings),
     SMTP(EmailProviderSMTPSettings),
