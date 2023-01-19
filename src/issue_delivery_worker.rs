@@ -30,14 +30,14 @@ pub enum ExecutionOutcome {
     EmptyQueue,
 }
 
-#[tracing::instrument(
-    skip_all,
-    fields(
-        newsletter_issue_id=tracing::field::Empty,
-        subscriber_email=tracing::field::Empty
-    ),
-    err
-)]
+// #[tracing::instrument(
+//     skip_all,
+//     fields(
+//         newsletter_issue_id=tracing::field::Empty,
+//         subscriber_email=tracing::field::Empty
+//     ),
+//     err
+// )]
 pub async fn try_execute_task(
     pool: &PgPool,
     email_client: &EmailClient,
@@ -85,7 +85,7 @@ pub async fn try_execute_task(
 
 type PgTransaction = Transaction<'static, Postgres>;
 
-#[tracing::instrument(skip_all)]
+// #[tracing::instrument(skip_all)]
 async fn dequeue_task(
     pool: &PgPool,
 ) -> Result<Option<(PgTransaction, Uuid, String)>, anyhow::Error> {
