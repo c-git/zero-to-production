@@ -31,7 +31,7 @@ pub async fn reject_anonymous_users(
 ) -> Result<ServiceResponse<impl MessageBody>, actix_web::Error> {
     let session = {
         let (http_request, payload) = req.parts_mut();
-        TypedSession::from_request(http_request, payload).await
+        TypedSession::from_request(dbg!(http_request), payload).await
     }?;
 
     match session.get_user_id().map_err(e500)? {
