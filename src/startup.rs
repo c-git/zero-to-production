@@ -19,6 +19,7 @@ use secrecy::{ExposeSecret, Secret};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::TcpListener;
+use tracing::info;
 use tracing_actix_web::TracingLogger;
 
 pub struct Application {
@@ -35,6 +36,7 @@ impl Application {
             "{}:{}",
             configuration.application.host, configuration.application.port
         );
+        info!("Server address is: {address}");
         let listener = TcpListener::bind(&address)?;
         let port = listener.local_addr().unwrap().port();
         let server = run(
