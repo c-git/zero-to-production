@@ -3167,6 +3167,7 @@ dependencies = [
 name = "zero2prod"
 version = "0.1.0"
 dependencies = [
+ "actix-files",
  "actix-session",
  "actix-web",
  "actix-web-flash-messages",

@@ -6,6 +6,7 @@ use crate::routes::{
     login, login_form, publish_newsletter, publish_newsletter_form, subscribe, subscribe_form,
     subscriber_list,
 };
+use actix_files as fs;
 use actix_session::storage::RedisSessionStore;
 use actix_session::SessionMiddleware;
 use actix_web::cookie::Key;
@@ -92,7 +93,7 @@ async fn run(
                 secret_key.clone(),
             ))
             .wrap(TracingLogger::default())
-            .route("/", web::get().to(home))
+            // .route("/", web::get().to(home))
             .service(
                 web::scope("/admin")
                     .wrap(from_fn(reject_anonymous_users))
@@ -111,6 +112,7 @@ async fn run(
             .route("/subscriptions", web::get().to(subscribe_form))
             .route("/subscriptions/confirm", web::get().to(confirm))
             .route("/newsletters", web::post().to(publish_newsletter))
+            .service(fs::Files::new("/", "./app/").index_file("index.html"))
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
